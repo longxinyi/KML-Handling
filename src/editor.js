@@ -181,6 +181,26 @@ const KMLEditor = () => {
     saveAs(blob, "3106testerKML.kml");
   };
 
+  const onDragStart = (event, index) => {
+    event.dataTransfer.setData("index", index.toString());
+  };
+
+  const onDragOver = (event) => {
+    event.preventDefault();
+  };
+
+  const onDrop = (event, index) => {
+    const dragIndex = parseInt(event.dataTransfer.getData("index"));
+    const dropIndex = index;
+
+    if (dragIndex !== dropIndex) {
+      const updatedLocations = [...currentLocations];
+      const [dragItem] = updatedLocations.splice(dragIndex, 1);
+      updatedLocations.splice(dropIndex, 0, dragItem);
+      setCurrentLocations(updatedLocations);
+    }
+  };
+
   return (
     <div
       style={{
@@ -196,8 +216,15 @@ const KMLEditor = () => {
             {console.log({ currentLocations })}
             <p>current locations entered</p>
             <ul>
-              {currentLocations.map((location) => (
-                <li>
+              {currentLocations.map((location, index) => (
+                <li
+                  style={{ marginBottom: "20px" }}
+                  key={index}
+                  draggable="true"
+                  onDragStart={(event) => onDragStart(event, index)}
+                  onDragOver={onDragOver}
+                  onDrop={(event) => onDrop(event, index)}
+                >
                   <div>{location.data.results[0].address_line1}</div>
                   <div>{location.data.results[0].address_line2}</div>
                   <button
@@ -222,21 +249,22 @@ const KMLEditor = () => {
         {searchResults.length > 0 && (
           <div>
             <p>search results</p>
-
-            {searchResults.map((result) => (
-              <ul>
-                <div>{result.address_line1}</div>
-                <div>{result.address_line2}</div>
-                <div value={result.lon}>long: {result.lon}</div>
-                <div value={result.lat}>lat: {result.lat}</div>
-                <button
-                  onClick={onAddItinerary}
-                  value={`${result.lat} ${result.lon}`}
-                >
-                  add to itinerary
-                </button>
-              </ul>
-            ))}
+            <ul>
+              {searchResults.map((result) => (
+                <li style={{ marginBottom: "20px" }}>
+                  <div>{result.address_line1}</div>
+                  <div>{result.address_line2}</div>
+                  <div value={result.lon}>long: {result.lon}</div>
+                  <div value={result.lat}>lat: {result.lat}</div>
+                  <button
+                    onClick={onAddItinerary}
+                    value={`${result.lat} ${result.lon}`}
+                  >
+                    add to itinerary
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

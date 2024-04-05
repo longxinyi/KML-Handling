@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import * as tj from "@mapbox/togeojson";
 import rewind from "@mapbox/geojson-rewind";
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  GeoJSON,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import { Icon, marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./leafletStyles.css";
@@ -60,9 +67,28 @@ export default function KMLViewer() {
   });
   const pointToLayer = (feature, latlng) => {
     console.log("feature", feature);
+    const sequenceNumber = layer.features.indexOf(feature) + 1;
     return marker(latlng, { icon: customIcon }).bindPopup(
-      feature.properties.name
+      `${sequenceNumber}. ${feature.properties.name}`
     );
+  };
+
+  const drawLinesBetweenLocations = () => {
+    if (!layer || !layer.features) return null;
+
+    const lines = [];
+    for (let i = 0; i < layer.features.length - 1; i++) {
+      const startCoords = [
+        layer.features[i].geometry.coordinates[1],
+        layer.features[i].geometry.coordinates[0],
+      ];
+      const endCoords = [
+        layer.features[i + 1].geometry.coordinates[1],
+        layer.features[i + 1].geometry.coordinates[0],
+      ];
+      lines.push([startCoords, endCoords]);
+    }
+    return lines;
   };
 
   return (
@@ -73,13 +99,17 @@ export default function KMLViewer() {
           center={center}
           zoom={8}
           scrollWheelZoom={false}
-          style={{ height: "400px" }}
+          style={{ height: "500px" }}
         >
           <TileLayer
             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {layer && <GeoJSON data={layer} pointToLayer={pointToLayer} />}
+          {layer &&
+            drawLinesBetweenLocations().map((line, index) => (
+              <Polyline positions={line} key={index} color="red" />
+            ))}
         </MapContainer>
       </div>
       <input type="file" accept=".kml" onChange={handleFileSelection} />
