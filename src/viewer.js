@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import * as tj from "@mapbox/togeojson";
 import rewind from "@mapbox/geojson-rewind";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from "react-leaflet";
 import { Icon, marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./leafletStyles.css";
 
-export default function App() {
+export default function KMLViewer() {
   const [layer, setLayer] = useState(null);
   const [center, setCenter] = useState([1.294385, 103.7727545]);
 
@@ -59,13 +59,15 @@ export default function App() {
     iconSize: [38, 38],
   });
   const pointToLayer = (feature, latlng) => {
-    return marker(latlng, { icon: customIcon });
+    console.log("feature", feature);
+    return marker(latlng, { icon: customIcon }).bindPopup(
+      feature.properties.name
+    );
   };
 
   return (
     <div className="App">
       <div>
-        {console.log(center)}
         <MapContainer
           key={key}
           center={center}

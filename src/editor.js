@@ -4,13 +4,14 @@ import * as tj from "@mapbox/togeojson";
 import rewind from "@mapbox/geojson-rewind";
 import { saveAs } from "file-saver";
 import tokml from "tokml";
+import KMLViewer from "./viewer";
 
 const KMLEditor = () => {
   //suggestions
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
 
-  const debounce = (func, timeout = 400) => {
+  const debounce = (func, timeout = 300) => {
     let timer;
     return (...args) => {
       clearTimeout(timer);
@@ -143,6 +144,7 @@ const KMLEditor = () => {
       const features = currentLocations.map((location) => {
         const lat = location.data.query.lat;
         const lon = location.data.query.lon;
+        const name = location.data.results[0].address_line1;
         return {
           type: "Feature",
           geometry: {
@@ -150,7 +152,7 @@ const KMLEditor = () => {
             coordinates: [lon, lat],
           },
           properties: {
-            name: "3106 project",
+            name: name,
           },
         };
       });
@@ -187,10 +189,11 @@ const KMLEditor = () => {
         justifyContent: "space-evenly",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
         <input type="file" accept=".kml" onChange={handleFileSelection} />
         {currentLocations.length > 0 && (
           <div>
+            {console.log({ currentLocations })}
             <p>current locations entered</p>
             <ul>
               {currentLocations.map((location) => (
@@ -213,7 +216,7 @@ const KMLEditor = () => {
         )}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
         <p>search for locations</p>
         <input onChange={onSearch} value={search} />
         {searchResults.length > 0 && (
