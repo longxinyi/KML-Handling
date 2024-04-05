@@ -1,23 +1,43 @@
-import logo from './logo.svg';
-import './App.css';
+import logo from "./logo.svg";
+import "./App.css";
+import KMLUploader from "./uploader";
+import KMLViewer from "./viewer";
+import KMLEditor from "./editor";
+import { useState } from "react";
 
 function App() {
+  const [tab, setTab] = useState("viewer");
+  const changeTab = (e) => {
+    setTab(e.target.value);
+  };
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          border: "solid",
+          borderColor: "black",
+          padding: "10px",
+          margin: "20px",
+          justifyContent: "space-evenly",
+        }}
+      >
+        <button onClick={changeTab} value="uploader">
+          uploader
+        </button>
+        <button onClick={changeTab} value="viewer">
+          viewer
+        </button>
+        <button onClick={changeTab} value="editor">
+          editor
+        </button>
+      </div>
+      <div>
+        {tab == "uploader" && <KMLUploader />}
+        {tab == "viewer" && <KMLViewer />}
+        {tab == "editor" && <KMLEditor />}
+      </div>
     </div>
   );
 }
