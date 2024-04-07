@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as tj from "@mapbox/togeojson";
 import rewind from "@mapbox/geojson-rewind";
-import {
-  MapContainer,
-  TileLayer,
-  GeoJSON,
-  Marker,
-  Popup,
-  Polyline,
-} from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Polyline } from "react-leaflet";
 import { Icon, marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./leafletStyles.css";
@@ -66,7 +59,6 @@ export default function KMLViewer() {
     iconSize: [38, 38],
   });
   const pointToLayer = (feature, latlng) => {
-    console.log("feature", feature);
     const sequenceNumber = layer.features.indexOf(feature) + 1;
     return marker(latlng, { icon: customIcon }).bindPopup(
       `${sequenceNumber}. ${feature.properties.name}`

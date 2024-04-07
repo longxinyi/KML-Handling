@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axiosClient from "./axiosClient";
 import * as tj from "@mapbox/togeojson";
 import rewind from "@mapbox/geojson-rewind";
 import { saveAs } from "file-saver";
 import tokml from "tokml";
 import KMLViewer from "./viewer";
+import ReusableKMLViewer from "./reusableViewer";
 
 const KMLEditor = () => {
   //suggestions
@@ -44,8 +45,14 @@ const KMLEditor = () => {
 
   //displaying current locations
   const [layer, setLayer] = useState(null);
+  const [center, setCenter] = useState([1.294385, 103.7727545]);
   const [currentLocations, setCurrentLocations] = useState([]);
   const myAPIKey = "ed24fe3439e946d5a60cda3a1b687587";
+
+  useEffect(() => {
+    const layer = convertToGeoJSON();
+    setLayer(layer);
+  }, [currentLocations]);
 
   //api call to parse coords into location
   const parseCoordsToLocation = async (lat, long) => {
@@ -114,12 +121,14 @@ const KMLEditor = () => {
       };
     });
     setLayer(converted); // save converted geojson to hook state
+    setCenter([
+      converted.features[0].geometry.coordinates[1],
+      converted.features[0].geometry.coordinates[0],
+    ]);
     convertCoordsToLocations(converted);
   };
 
   const onAddItinerary = (e) => {
-    // const newListOfLocations = [...currentLocations, e.target.value];
-    // setCurrentLocations(newListOfLocations);
     const value = e.target.value.split(" ");
     parseCoordsToLocation(value[0], value[1]).then((response) => {
       const newListOfLocations = [...currentLocations, response];
@@ -136,6 +145,41 @@ const KMLEditor = () => {
     );
     setCurrentLocations(newListOfLocations);
   };
+
+  //getting directions between locations
+  const [mode, setMode] = useState("drive");
+  const [directions, setDirections] = useState([]);
+  const [geometry, setGeometry] = useState([]);
+  const getDirectionsBtwLocations = async () => {
+    if (currentLocations.length > 1) {
+      let formattedWaypoints = "";
+      currentLocations.forEach(
+        (location) =>
+          (formattedWaypoints +=
+            location.data.query.lat + "," + location.data.query.lon + "|")
+      );
+      formattedWaypoints = formattedWaypoints.substring(
+        0,
+        formattedWaypoints.length - 1
+      );
+      try {
+        await axiosClient
+          .get(
+            `https://api.geoapify.com/v1/routing?waypoints=${formattedWaypoints}&mode=${mode}&apiKey=ed24fe3439e946d5a60cda3a1b687587`
+          )
+          .then((response) => {
+            setDirections(response.data.features[0].properties.legs);
+            setGeometry(response.data.features[0].geometry.coordinates);
+          });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    getDirectionsBtwLocations();
+  }, [currentLocations, mode]);
 
   //converting and exporting as kml
 
@@ -202,71 +246,102 @@ const KMLEditor = () => {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-evenly",
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
-        <input type="file" accept=".kml" onChange={handleFileSelection} />
-        {currentLocations.length > 0 && (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-evenly",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
+          <input type="file" accept=".kml" onChange={handleFileSelection} />
           <div>
-            {console.log({ currentLocations })}
-            <p>current locations entered</p>
-            <ul>
-              {currentLocations.map((location, index) => (
-                <li
-                  style={{ marginBottom: "20px" }}
-                  key={index}
-                  draggable="true"
-                  onDragStart={(event) => onDragStart(event, index)}
-                  onDragOver={onDragOver}
-                  onDrop={(event) => onDrop(event, index)}
-                >
-                  <div>{location.data.results[0].address_line1}</div>
-                  <div>{location.data.results[0].address_line2}</div>
-                  <button
-                    onClick={onDeleteLocation}
-                    value={`${location.data.query.lat} ${location.data.query.lon}`}
-                  >
-                    delete
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <label>mode of transport:</label>
+            <select
+              onChange={(e) => setMode(e.target.value)}
+              style={{ maxWidth: "20%" }}
+            >
+              <option value="drive">Car</option>
+              <option value="walk">Walking</option>
+              <option value="cycle">Cycling</option>
+            </select>
           </div>
-        )}
-        {currentLocations.length > 0 && (
-          <button onClick={downloadAsKML}>download as kml</button>
-        )}
-      </div>
+          {console.log({ currentLocations })}
+          {currentLocations.length > 0 && (
+            <div>
+              <p>current locations entered</p>
+              <ul>
+                {currentLocations.map((location, index) => (
+                  <li
+                    style={{ marginBottom: "20px" }}
+                    key={index}
+                    draggable="true"
+                    onDragStart={(event) => onDragStart(event, index)}
+                    onDragOver={onDragOver}
+                    onDrop={(event) => onDrop(event, index)}
+                  >
+                    <div>{location.data.results[0].address_line1}</div>
+                    <div>{location.data.results[0].address_line2}</div>
+                    <button
+                      onClick={onDeleteLocation}
+                      value={`${location.data.query.lat} ${location.data.query.lon}`}
+                    >
+                      delete
+                    </button>
+                    <div>
+                      {index < directions.length &&
+                        directions[index].steps.map((step) => (
+                          <dd
+                            style={{
+                              border: "solid",
+                              borderColor: "black",
+                              padding: "5px",
+                            }}
+                          >
+                            {step.instruction.text}
+                          </dd>
+                        ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {currentLocations.length > 0 && (
+            <button onClick={downloadAsKML}>download as kml</button>
+          )}
+        </div>
 
-      <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
-        <p>search for locations</p>
-        <input onChange={onSearch} value={search} />
-        {searchResults.length > 0 && (
-          <div>
-            <p>search results</p>
-            <ul>
-              {searchResults.map((result) => (
-                <li style={{ marginBottom: "20px" }}>
-                  <div>{result.address_line1}</div>
-                  <div>{result.address_line2}</div>
-                  <div value={result.lon}>long: {result.lon}</div>
-                  <div value={result.lat}>lat: {result.lat}</div>
-                  <button
-                    onClick={onAddItinerary}
-                    value={`${result.lat} ${result.lon}`}
-                  >
-                    add to itinerary
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div style={{ display: "flex", flexDirection: "column", width: "50%" }}>
+          <p>search for locations</p>
+          <input onChange={onSearch} value={search} />
+          {console.log({ searchResults })}
+          {searchResults.length > 0 && (
+            <div>
+              <p>search results</p>
+              <ul>
+                {searchResults.map((result) => (
+                  <li style={{ marginBottom: "20px" }}>
+                    <div>{result.address_line1}</div>
+                    <div>{result.address_line2}</div>
+                    <div value={result.lon}>long: {result.lon}</div>
+                    <div value={result.lat}>lat: {result.lat}</div>
+                    <button
+                      onClick={onAddItinerary}
+                      value={`${result.lat} ${result.lon}`}
+                    >
+                      add to itinerary
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+      <div>
+        <ReusableKMLViewer layer={layer} center={center} geometry={geometry} />
       </div>
     </div>
   );
